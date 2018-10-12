@@ -26,8 +26,7 @@ var id = '5bbf12cc86a84210f1478200';
 // 	console.log(todo)
 // }).catch((e) => console.log(e))
 
-User
-	.findById(id)
+User.findById(id)
 	.then((user) => {
 		if(!user) return console.log("ID is not found");
 		console.log(user.email)
