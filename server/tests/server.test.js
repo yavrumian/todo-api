@@ -33,7 +33,7 @@ describe('POST /todos', () => {
 	it('not create with invalid data', (done) => {
 		request(app)
 			.post('/todos')
-			.send({text: 'text'})
+			.send({})
 			.expect(400)
 			.end((err, res) => {
 				if(err) return done(err);
