@@ -4,22 +4,11 @@ const {ObjectId} = require('mongodb')
 
 const {app} = require('./../server');
 const {Todo} = require('./../models/todo');
+const {todos, populateTodos, users, populateUsers} = require('./seed/seed');
+const {User} = require('./../models/user');
 
-const todos = [{
-	_id: new ObjectId(),
-	text: 'Frst tod'
-}, {
-	_id: new ObjectId(),
-	text: '2nd todo',
-	completed: true,
-	completedAt: 1458
-}];
-
-beforeEach((done) => {
-	Todo.deleteMany({}).then(() => {
-		return Todo.insertMany(todos)
-	}).then(() => done());
-});
+beforeEach(populateUsers);
+beforeEach(populateTodos);
 
 describe('POST /todos', () => {
 	it('create new todo', (done) => {
@@ -161,3 +150,70 @@ describe('PATCH /todos/:id', () => {
 			.end(done)
 	})
 });
+
+describe('GET /usrs/me', () => {
+	it('should return user id authenticated', (done) => {
+		request(app)
+			.get('/users/me')
+			.set('x-auth', users[0].tokens[0].token)
+			.expect(200)
+			.expect((res) => {
+				expect(res.body._id).toBe(users[0]._id.toHexString());
+				expect(res.body.email).toBe(users[0].email);
+			})
+			.end(done)
+	});
+
+	it('should return 401 if not authenticated', (done) => {
+		request(app)
+			.get('/users/me')
+			.expect(401)
+			.expect((res) => {
+				expect(res.body).toEqual({});
+			})
+			.end(done)
+	})
+});
+
+describe('POST /users', () => {
+	it('Should create a user', (done) =>{
+		var email = 'example@mail.com',
+			password = 'validpass';
+
+		request(app)
+			.post('/users')
+			.send({email, password})
+			.expect(200)
+			.expect((res) => {
+				expect(res.headers['x-auth']).toBeTruthy()
+				expect(res.body._id).toBeTruthy();
+				expect(res.body.email).toBe(email);
+			})
+			.end((err) => {
+				if(err) return done(err);
+
+				User.findOne({email}).then((user) =>{
+					expect(user).toBeTruthy();
+					expect(user.password).not.toBe(password);
+					done()
+				})
+			});
+	})
+
+	it('Should return 400 if request is invalid', (done) =>{
+		request(app)
+			.post('/users')
+			.send({email: "text", password: "text"})
+			.expect(400)
+			.end(done)
+
+	})
+
+	it('should not create user if email is in use', (done) =>{
+		request(app)
+			.post('/users')
+			.send({email: users[0].email, password: 'validpass'})
+			.expect(400)
+			.end(done)
+	})
+})
